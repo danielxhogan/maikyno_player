@@ -3,11 +3,6 @@ app_sources = [
 ]
 
 app_deps = [
-    # lavf,
-    # lavc,
-    # lavu,
-    # pipewire,
-    # libm
 ]
 
 executable('mkp', app_sources, dependencies: app_deps, link_with: libmkp)
