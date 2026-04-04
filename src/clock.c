@@ -18,30 +18,30 @@ void set_clock(Clock *clock, double pts, int serial)
     set_clock_at(clock, pts, serial, time);
 }
 
-void set_clock_at(Clock *c, double pts, int serial, double time)
+void set_clock_at(Clock *clock, double pts, int serial, double time)
 {
-    c->pts = pts;
-    c->last_updated = time;
-    c->pts_drift = c->pts - time;
-    c->serial = serial;
+    clock->pts = pts;
+    clock->last_updated = time;
+    clock->pts_drift = clock->pts - time;
+    clock->serial = serial;
 }
 
-static double get_clock(Clock *c)
+static double get_clock(Clock *clock)
 {
-    if (*c->q_serial != c->serial)
+    if (*clock->q_serial != clock->serial)
         return NAN;
-    if (c->paused) {
-        return c->pts;
+    if (clock->paused) {
+        return clock->pts;
     } else {
         double time = av_gettime_relative() / 1000000.0;
-        return c->pts_drift + time - (time - c->last_updated) * (1.0 - c->speed);
+        return clock->pts_drift + time - (time - clock->last_updated) * (1.0 - clock->speed);
     }
 }
 
-void sync_clock_to_slave(Clock *c, Clock *slave)
+void sync_clock_to_slave(Clock *master, Clock *slave)
 {
-    double clock = get_clock(c);
+    double clock = get_clock(master);
     double slave_clock = get_clock(slave);
     if (!isnan(slave_clock) && (isnan(clock) || fabs(clock - slave_clock) > AV_NOSYNC_THRESHOLD))
-        set_clock(c, slave_clock, slave->serial);
+        set_clock(master, slave_clock, slave->serial);
 }

@@ -1,6 +1,37 @@
 #include "packet_queue.h"
 #include <libavutil/avutil.h>
 
+int packet_queue_init(PacketQueue *pkt_q)
+{
+    int ret = 0;
+
+    memset(pkt_q, 0, sizeof(PacketQueue));
+    pkt_q->pkt_list = av_fifo_alloc2(1, sizeof(Packet),
+    AV_FIFO_FLAG_AUTO_GROW);
+    if (!pkt_q->pkt_list)
+        return -ENOMEM;
+
+    if ((ret = mutex_init(&pkt_q->mutex)) != 0) {
+        fprintf(stderr, "Failed to create mutex. Error: %d\n", ret);
+        return ret;
+    }
+    if ((ret = cond_init(&pkt_q->cond)) != 0) {
+        fprintf(stderr, "Failed to create cond. Error: %d\n", ret);
+        return ret;
+    }
+
+    pkt_q->abort_request = 1;
+    return 0;
+}
+
+void packet_queue_start(PacketQueue *pkt_q)
+{
+    mutex_lock(&pkt_q->mutex);
+    pkt_q->abort_request = 0;
+    pkt_q->serial++;
+    mutex_unlock(&pkt_q->mutex);
+}
+
 int packet_queue_put_private(PacketQueue *pkt_q, AVPacket *av_pkt)
 {
     Packet pkt;
@@ -51,67 +82,6 @@ int packet_queue_put_nullpacket(PacketQueue *pkt_q,
     return packet_queue_put(pkt_q, av_pkt);
 }
 
-int packet_queue_init(PacketQueue *pkt_q)
-{
-    int ret = 0;
-
-    memset(pkt_q, 0, sizeof(PacketQueue));
-    pkt_q->pkt_list = av_fifo_alloc2(1, sizeof(Packet),
-    AV_FIFO_FLAG_AUTO_GROW);
-    if (!pkt_q->pkt_list)
-        return -ENOMEM;
-
-    if ((ret = mutex_init(&pkt_q->mutex)) != 0) {
-        fprintf(stderr, "Failed to create mutex. Error: %d\n", ret);
-        return ret;
-    }
-    if ((ret = cond_init(&pkt_q->cond)) != 0) {
-        fprintf(stderr, "Failed to create cond. Error: %d\n", ret);
-        return ret;
-    }
-
-    pkt_q->abort_request = 1;
-    return 0;
-}
-
-void packet_queue_flush(PacketQueue *pkt_q)
-{
-    Packet pkt;
-
-    mutex_lock(&pkt_q->mutex);
-    while (av_fifo_read(pkt_q->pkt_list, &pkt, 1) >= 0)
-        av_packet_free(&pkt.av_pkt);
-    pkt_q->nb_packets = 0;
-    pkt_q->size = 0;
-    pkt_q->duration = 0;
-    pkt_q->serial++;
-    mutex_unlock(&pkt_q->mutex);
-}
-
-void packet_queue_destroy(PacketQueue *pkt_q)
-{
-    packet_queue_flush(pkt_q);
-    av_fifo_freep2(&pkt_q->pkt_list);
-    mutex_destroy(&pkt_q->mutex);
-    cond_destroy(&pkt_q->cond);
-}
-
-void packet_queue_abort(PacketQueue *pkt_q)
-{
-    mutex_lock(&pkt_q->mutex);
-    pkt_q->abort_request = 1;
-    cond_signal(&pkt_q->cond);
-    mutex_unlock(&pkt_q->mutex);
-}
-
-void packet_queue_start(PacketQueue *pkt_q)
-{
-    mutex_lock(&pkt_q->mutex);
-    pkt_q->abort_request = 0;
-    pkt_q->serial++;
-    mutex_unlock(&pkt_q->mutex);
-}
-
 /* return < 0 if aborted, 0 if no packet and > 0 if packet.  */
 int packet_queue_get(PacketQueue *pkt_q,
     AVPacket *av_pkt, int block, int *serial)
@@ -147,4 +117,33 @@ int packet_queue_get(PacketQueue *pkt_q,
 
     mutex_unlock(&pkt_q->mutex);
     return ret;
+}
+void packet_queue_flush(PacketQueue *pkt_q)
+{
+    Packet pkt;
+
+    mutex_lock(&pkt_q->mutex);
+    while (av_fifo_read(pkt_q->pkt_list, &pkt, 1) >= 0)
+        av_packet_free(&pkt.av_pkt);
+    pkt_q->nb_packets = 0;
+    pkt_q->size = 0;
+    pkt_q->duration = 0;
+    pkt_q->serial++;
+    mutex_unlock(&pkt_q->mutex);
+}
+
+void packet_queue_abort(PacketQueue *pkt_q)
+{
+    mutex_lock(&pkt_q->mutex);
+    pkt_q->abort_request = 1;
+    cond_signal(&pkt_q->cond);
+    mutex_unlock(&pkt_q->mutex);
+}
+
+void packet_queue_destroy(PacketQueue *pkt_q)
+{
+    packet_queue_flush(pkt_q);
+    av_fifo_freep2(&pkt_q->pkt_list);
+    mutex_destroy(&pkt_q->mutex);
+    cond_destroy(&pkt_q->cond);
 }

@@ -11,6 +11,6 @@ typedef struct Clock {
 } Clock;
 
 void init_clock(Clock *clock, int *queue_serial);
-void set_clock(Clock *c, double pts, int serial);
-void set_clock_at(Clock *c, double pts, int serial, double time);
-void sync_clock_to_slave(Clock *c, Clock *slave);
+void set_clock(Clock *clock, double pts, int serial);
+void set_clock_at(Clock *clock, double pts, int serial, double time);
+void sync_clock_to_slave(Clock *clock, Clock *slave);

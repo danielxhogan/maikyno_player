@@ -19,10 +19,10 @@
 #define BUFFER_SIZE (16*1024)
 
 typedef struct Decoder {
-    AVPacket *pkt;
+    AVPacket *av_pkt;
+    int pkt_serial;
     PacketQueue *pkt_q;
     AVCodecContext *dec_ctx;
-    int pkt_serial;
     int finished;
     int packet_pending;
     Cond empty_queue_cond;
@@ -46,17 +46,14 @@ typedef struct PwContext {
     struct pw_main_loop *main_loop;
     struct pw_loop *loop;
     struct pw_stream *stream;
-    float accumulator;
-    struct spa_source *refill_event;
-    struct spa_ringbuffer ring;
-    float buffer[BUFFER_SIZE * DEFAULT_CHANNELS];
+    int buf_size;
+    int64_t cb_time;
 } PwContext;
 
 typedef struct MkPlayer {
     char *src;
 
-    PwContext pw;
-    int64_t audio_callback_time;
+    PwContext pw_ctx;
 
     AVFormatContext *fmt_ctx;
     struct SwrContext *swr_ctx;
@@ -73,23 +70,17 @@ typedef struct MkPlayer {
     Decoder a_dec;
     FrameQueue a_frame_q;
     PacketQueue a_pkt_q;
+
     Clock a_clock;
     double audio_clock;
     int audio_clock_serial;
 
-    Clock ext_clock;
-    
     uint8_t *audio_buf;
     int audio_buf_index;
     unsigned int audio_buf_size;
     int audio_write_buf_size;
-    uint8_t *audio_buf1;
-    unsigned int audio_buf1_size;
-    int audio_hw_buf_size;
 
     int abort_request;
     int max_frame_duration;
     int eof;
-
-
 } MkPlayer;

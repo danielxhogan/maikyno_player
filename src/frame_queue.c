@@ -1,13 +1,5 @@
 #include "frame_queue.h"
 
-void frame_queue_unref_item(Frame *frame)
-{
-    if (!frame)
-        return;
-    av_frame_unref(frame->av_frame);
-    avsubtitle_free(&frame->sub);
-}
-
 int frame_queue_init(FrameQueue *frame_q,
     PacketQueue *pkt_q, int keep_last)
 {
@@ -34,16 +26,12 @@ int frame_queue_init(FrameQueue *frame_q,
     return 0;
 }
 
-void frame_queue_destroy(FrameQueue *frame_q)
+void frame_queue_unref_item(Frame *frame)
 {
-    int i;
-    for (i = 0; i < frame_q->max_size; i++) {
-        Frame *frame = &frame_q->queue[i];
-        frame_queue_unref_item(frame);
-        av_frame_free(&frame->av_frame);
-    }
-    mutex_destroy(&frame_q->mutex);
-    cond_destroy(&frame_q->cond);
+    if (!frame)
+        return;
+    av_frame_unref(frame->av_frame);
+    avsubtitle_free(&frame->sub);
 }
 
 void frame_queue_signal(FrameQueue *frame_q)
@@ -88,6 +76,16 @@ Frame *frame_queue_peek_writable(FrameQueue *frame_q)
     return &frame_q->queue[frame_q->write_idx];
 }
 
+void frame_queue_push(FrameQueue *frame_q)
+{
+    if (++frame_q->write_idx == frame_q->max_size)
+        frame_q->write_idx = 0;
+    mutex_lock(&frame_q->mutex);
+    frame_q->size++;
+    cond_signal(&frame_q->cond);
+    mutex_unlock(&frame_q->mutex);
+}
+
 Frame *frame_queue_peek_readable(FrameQueue *frame_q)
 {
     mutex_lock(&frame_q->mutex);
@@ -104,16 +102,6 @@ Frame *frame_queue_peek_readable(FrameQueue *frame_q)
     return &frame_q->queue[
         (frame_q->read_idx + frame_q->read_idx_shown) % frame_q->max_size
     ];
-}
-
-void frame_queue_push(FrameQueue *frame_q)
-{
-    if (++frame_q->write_idx == frame_q->max_size)
-        frame_q->write_idx = 0;
-    mutex_lock(&frame_q->mutex);
-    frame_q->size++;
-    cond_signal(&frame_q->cond);
-    mutex_unlock(&frame_q->mutex);
 }
 
 void frame_queue_next(FrameQueue *frame_q)
@@ -145,4 +133,16 @@ int64_t frame_queue_last_pos(FrameQueue *frame_q)
         return frame->pos;
     else
         return -1;
+}
+
+void frame_queue_destroy(FrameQueue *frame_q)
+{
+    int i;
+    for (i = 0; i < frame_q->max_size; i++) {
+        Frame *frame = &frame_q->queue[i];
+        frame_queue_unref_item(frame);
+        av_frame_free(&frame->av_frame);
+    }
+    mutex_destroy(&frame_q->mutex);
+    cond_destroy(&frame_q->cond);
 }
