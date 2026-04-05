@@ -3,7 +3,6 @@
 #include "decode.h"
 #include "audio.h"
 #include "frame_queue.h"
-#include "packet_queue.h"
 #include "clock.h"
 
 #include <libavutil/channel_layout.h>

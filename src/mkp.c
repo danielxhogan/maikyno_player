@@ -1,6 +1,6 @@
 #include "./includes/libmkp/mkplayer.h"
 #include "mkp.h"
-#include "read_thread.h"
+#include "demux.h"
 
 #include <malloc.h>
 
@@ -70,7 +70,7 @@ MkPlayer *mkp_create_player(char *src, int initial_a_stream_idx)
 
     initialize_audio_output(player);
 
-    if (thread_create(&player->read_tid, read_thread, player) != 0)
+    if (thread_create(&player->read_tid, demux_thread, player) != 0)
         goto end;
 
     if (thread_create(&player->a_dec.decoder_tid, audio_thread, player) != 0)

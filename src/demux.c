@@ -59,7 +59,7 @@ static int stream_has_enough_packets(AVStream *stream,
         (!queue->duration || av_q2d(stream->time_base) * queue->duration > 1.0));
 }
 
-void *read_thread(void *ctx)
+void *demux_thread(void *ctx)
 {
     int ret = 0;
     MkPlayer *player = ctx;
