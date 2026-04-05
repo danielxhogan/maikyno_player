@@ -8,7 +8,6 @@
 
 typedef pthread_mutex_t Mutex;
 typedef pthread_cond_t  Cond;
-// typedef pthread_mutex_t static_mutex;
 typedef pthread_t       Thread;
 
 #define STATIC_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
@@ -42,18 +41,8 @@ static inline int mutex_init_type_internal(Mutex *mutex, enum MutexType mtype)
     return ret;
 }
 
-// static inline int mutex_init_type(Mutex *mutex, enum MutexType mtype)
-// {
-//     return mutex_init_type_internal(mutex, mtype);
-// }
-
 #define mutex_init_type(mutex, mtype) \
     mutex_init_type_internal(mutex, mtype)
-
-// static inline int mutex_init(Mutex *mutex)
-// {
-//     return mutex_init_type(mutex, MUTEX_NORMAL);
-// }
 
 #define mutex_destroy    pthread_mutex_destroy
 #define mutex_lock       pthread_mutex_lock
@@ -107,9 +96,6 @@ static inline int cond_timedwait(Cond *cond, Mutex *mutex, uint64_t timeout)
 
     return pthread_cond_timedwait(cond, mutex, &ts);
 }
-
-// #define static_mutex_lock    pthread_mutex_lock
-// #define static_mutex_unlock  pthread_mutex_unlock
 
 #define THREAD_VOID void *
 #define THREAD_RETURN() return NULL

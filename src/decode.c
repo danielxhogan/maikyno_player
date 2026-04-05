@@ -1,5 +1,5 @@
+#include "decode.h"
 #include "mkp.h"
-#include "thread/thread.h"
 
 int initialize_decoder(Decoder *dec, AVCodecParameters *codecpar,
     PacketQueue *pkt_q, Cond empty_queue_cond)
@@ -44,7 +44,8 @@ int initialize_decoder(Decoder *dec, AVCodecParameters *codecpar,
     return 0;
 }
 
-void decoder_destroy(Decoder *dec) {
+void decoder_destroy(Decoder *dec)
+{
     av_packet_free(&dec->av_pkt);
     avcodec_free_context(&dec->dec_ctx);
 }
@@ -72,7 +73,7 @@ int decode_frame(Decoder *dec, AVFrame *av_frame, AVSubtitle *sub)
                     if (ret < 0)
                         break;
                         
-                    AVRational tb = (AVRational){1, av_frame->sample_rate};
+                    AVRational tb = (AVRational) {1, av_frame->sample_rate};
 
                     if (av_frame->pts != AV_NOPTS_VALUE) {
                         av_frame->pts = av_rescale_q(av_frame->pts,

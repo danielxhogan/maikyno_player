@@ -1,9 +1,6 @@
 #include "../includes/libmkp/mkplayer.h"
 #include <malloc.h>
 
-#include <signal.h>
-#include <stdbool.h>
-
 typedef struct App {
     MkPlayer *player;
     char *src;
@@ -13,7 +10,7 @@ int main(int argc, char **argv)
 {
     App *app = malloc(sizeof(App));
     app->src = "http://192.168.1.209:8080/media/tha_movies/mk_movies_2/collections/The Fast & The Furious Series/01 - The Fast And The Furious/The Fast And The Furious.mkv";
-    app->player = mkp_create_player(app->src, -1);
+    app->player = mkp_create_player(app->src, 4);
     if (!app->player)
         return -1;
 

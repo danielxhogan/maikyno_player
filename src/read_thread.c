@@ -4,6 +4,51 @@
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 
+static int decode_interrupt_cb(void *ctx)
+{
+    MkPlayer *player = ctx;
+    return player->abort_request;
+}
+
+int initialize_demuxer(MkPlayer *player)
+{
+    int ret = 0;
+
+    player->fmt_ctx = avformat_alloc_context();
+    if (!player->fmt_ctx) {
+        av_log(NULL, AV_LOG_FATAL, "Could not allocate context.\n");
+        return AVERROR(ENOMEM);
+    }
+
+    player->fmt_ctx->interrupt_callback.callback = decode_interrupt_cb;
+    player->fmt_ctx->interrupt_callback.opaque = player;
+
+    ret = avformat_open_input(&player->fmt_ctx, player->src, NULL, NULL);
+    if (ret < 0) {
+        fprintf(stderr, "Failed to open input.\n"
+            "Libav Error: %s.\n", av_err2str(ret));
+        return ret;
+    }
+
+    ret = avformat_find_stream_info(player->fmt_ctx, NULL);
+    if (ret < 0) {
+        fprintf(stderr, "Failed to find stream info.\n"
+            "Libav Error: %s.\n", av_err2str(ret));
+        return ret;
+    }
+
+    if (player->fmt_ctx->pb)
+        player->fmt_ctx->pb->eof_reached = 0; // FIXME hack, ffplay maybe should not use avio_feof() to test for the end
+
+    player->max_frame_duration =
+        (player->fmt_ctx->iformat->flags & AVFMT_TS_DISCONT) ? 10.0 : 3600.0;
+
+    if ((ret = packet_queue_init(&player->a_pkt_q)) != 0)
+        return ret;
+
+    return 0;
+}
+
 static int stream_has_enough_packets(AVStream *stream,
     int stream_id, PacketQueue *queue)
 {
@@ -19,7 +64,6 @@ void *read_thread(void *ctx)
     int ret = 0;
     MkPlayer *player = ctx;
     AVPacket *pkt = NULL;
-    int stream_idxs[AVMEDIA_TYPE_NB];
     Mutex wait_mutex;
 
     ret = mutex_init(&wait_mutex);
@@ -28,7 +72,9 @@ void *read_thread(void *ctx)
         goto end;
     }
 
-    memset(stream_idxs, -1, sizeof(stream_idxs));
+    if (cond_init(&player->continue_read_thread) != 0) {
+        fprintf(stderr, "Failed to init continue_read_thread. Error: %d\n", ret);
+    }
 
     pkt = av_packet_alloc();
     if (!pkt)

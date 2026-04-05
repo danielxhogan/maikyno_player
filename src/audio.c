@@ -1,13 +1,11 @@
+#include "audio.h"
 #include "mkp.h"
-#include "frame_queue.h"
 
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
 
 #include <libswresample/swresample.h>
 #include <libavutil/time.h>
-
-int decode_frame(Decoder *dec, AVFrame *frame, AVSubtitle *sub);
 
 static int prepare_frame_data(MkPlayer *player)
 {
@@ -267,6 +265,9 @@ void initialize_audio_output(MkPlayer *player)
         PW_STREAM_FLAG_MAP_BUFFERS |
         PW_STREAM_FLAG_RT_PROCESS,
         params, n_params);
+
+    if (frame_queue_init(&player->a_frame_q, &player->a_pkt_q, 1) != 0)
+        printf("Failed to init audio frame queue.\n");
 }
 
 void *audio_thread(void *ctx)
@@ -277,10 +278,11 @@ void *audio_thread(void *ctx)
     int got_frame = 0;
     int ret = 0;
 
-    packet_queue_start(player->a_dec.pkt_q);
-
     if (!av_frame)
         return NULL;
+
+    packet_queue_start(player->a_dec.pkt_q);
+    init_clock(&player->a_clock, &player->a_pkt_q.serial);
 
     if (thread_create(&player->pw_ctx.main_loop_tid, pw_main_loop_run, player->pw_ctx.main_loop) != 0) {
         fprintf(stderr, "Failed to start pw_ctx main loop thread.\n");

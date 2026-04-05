@@ -1,81 +1,18 @@
 #include "./includes/libmkp/mkplayer.h"
 #include "mkp.h"
-#include "frame_queue.h"
-#include "thread/thread.h"
-#include "clock.h"
+#include "read_thread.h"
 
 #include <malloc.h>
 
-int initialize_decoder(Decoder *dec, AVCodecParameters *codecpar,
-    PacketQueue *pkt_q, Cond empty_queue_cond);
-void initialize_audio_output(MkPlayer *player);
-void *read_thread(void *ctx);
-void *audio_thread(void *ctx);
-
 static int initialize_player(MkPlayer **player, char *src)
 {
-    int ret = 0;
-
     *player = malloc(sizeof(MkPlayer));
     if (!player)
-        return -1;
+        return -ENOMEM;
 
     (*player)->fmt_ctx = NULL;
     (*player)->eof = 0;
     (*player)->src = strdup(src);
-
-    if (frame_queue_init(&(*player)->a_frame_q, &(*player)->a_pkt_q, 1) != 0)
-        return -1;
-    if (packet_queue_init(&(*player)->a_pkt_q) != 0)
-        return -1;
-    init_clock(&(*player)->a_clock, &(*player)->a_pkt_q.serial);
-
-    ret = cond_init(&(*player)->continue_read_thread);
-    if (ret != 0) {
-        fprintf(stderr, "Failed to init continue_read_thread. Error: %d\n", ret);
-        return ret;
-    }
-
-    return 0;
-}
-
-static int decode_interrupt_cb(void *ctx)
-{
-    MkPlayer *player = ctx;
-    return player->abort_request;
-}
-
-static int initialize_demuxer(MkPlayer *player)
-{
-    int ret = 0;
-
-    player->fmt_ctx = avformat_alloc_context();
-    if (!player->fmt_ctx) {
-        av_log(NULL, AV_LOG_FATAL, "Could not allocate context.\n");
-        return AVERROR(ENOMEM);
-    }
-
-    player->fmt_ctx->interrupt_callback.callback = decode_interrupt_cb;
-    player->fmt_ctx->interrupt_callback.opaque = player;
-
-    ret = avformat_open_input(&player->fmt_ctx, player->src, NULL, NULL);
-    if (ret < 0) {
-        fprintf(stderr, "Failed to open input.\n"
-            "Libav Error: %s.\n", av_err2str(ret));
-        return ret;
-    }
-
-    ret = avformat_find_stream_info(player->fmt_ctx, NULL);
-    if (ret < 0) {
-        fprintf(stderr, "Failed to find stream info.\n"
-            "Libav Error: %s.\n", av_err2str(ret));
-        return ret;
-    }
-
-    if (player->fmt_ctx->pb)
-        player->fmt_ctx->pb->eof_reached = 0; // FIXME hack, ffplay maybe should not use avio_feof() to test for the end
-    player->max_frame_duration =
-        (player->fmt_ctx->iformat->flags & AVFMT_TS_DISCONT) ? 10.0 : 3600.0;
 
     return 0;
 }
