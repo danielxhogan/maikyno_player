@@ -45,12 +45,6 @@ int initialize_decoder(Decoder *dec, AVCodecParameters *codecpar, Cond need_pkts
     return 0;
 }
 
-void decoder_destroy(Decoder *dec)
-{
-    av_packet_free(&dec->av_pkt);
-    avcodec_free_context(&dec->av_dec);
-}
-
 int decode_frame(Decoder *dec, AVFrame *av_frame, AVSubtitle *sub)
 {
     int ret = AVERROR(EAGAIN);
@@ -166,4 +160,15 @@ int decode_frame(Decoder *dec, AVFrame *av_frame, AVSubtitle *sub)
             }
         }
     }
+}
+
+void destroy_decoder(Decoder *dec, FrameQueue *frame_q)
+{
+    frame_queue_signal(frame_q);
+    thread_join(dec->tid);
+    packet_queue_flush(&dec->pkt_q);
+    packet_queue_destroy(&dec->pkt_q);
+
+    av_packet_free(&dec->av_pkt);
+    avcodec_free_context(&dec->av_dec);
 }

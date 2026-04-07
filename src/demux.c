@@ -44,9 +44,6 @@ int initialize_demuxer(MkPlayer *player)
     player->max_frame_duration =
         (player->av_fmt->iformat->flags & AVFMT_TS_DISCONT) ? 10.0 : 3600.0;
 
-    // if ((ret = packet_queue_init(&player->a_pkt_q)) != 0)
-    //     return ret;
-
     return 0;
 }
 

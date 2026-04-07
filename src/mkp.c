@@ -6,35 +6,18 @@
 
 static int initialize_player(MkPlayer **player, char *src)
 {
-    *player = malloc(sizeof(MkPlayer));
+    *player = calloc(1, sizeof(MkPlayer));
     if (!player)
         return -ENOMEM;
 
-    (*player)->av_fmt = NULL;
-    (*player)->eof = 0;
     (*player)->src = strdup(src);
 
     return 0;
 }
 
-static void set_initial_stream(MkPlayer *player,
+static int get_initial_stream_idx(MkPlayer *player,
     enum AVMediaType media_type, int initial_stream_idx)
 {
-    int *stream_idx;
-    int *last_stream_idx;
-    // AVStream **av_stream;
-
-    switch (media_type) {
-    case AVMEDIA_TYPE_AUDIO:
-        stream_idx = &player->a_player->stream_idx;
-        last_stream_idx = &player->a_player->last_stream_idx;
-        // av_stream = &player->a_player.av_stream;
-        break;
-    default:
-        printf("set_initial_stream: SHOULD NOT REACH!!\n");
-        break;
-    }
-
     if (initial_stream_idx < 0 ||
         initial_stream_idx >= player->av_fmt->nb_streams ||
         player->av_fmt->streams[initial_stream_idx]->codecpar->codec_type
@@ -44,10 +27,7 @@ static void set_initial_stream(MkPlayer *player,
             media_type, -1, -1, NULL, 0);
     }
 
-    *stream_idx = initial_stream_idx;
-    *last_stream_idx = initial_stream_idx;
-    player->av_fmt->streams[*stream_idx]->discard = AVDISCARD_DEFAULT;
-    // *av_stream = player->av_fmt->streams[*stream_idx];
+    return initial_stream_idx;
 }
 
 MkPlayer *mkp_create_player(char *src, int initial_a_stream_idx)
@@ -60,11 +40,13 @@ MkPlayer *mkp_create_player(char *src, int initial_a_stream_idx)
     if (initialize_demuxer(player) != 0)
         goto end;
 
-    player->a_player = create_audio_player();
+    initial_a_stream_idx =
+        get_initial_stream_idx(player, AVMEDIA_TYPE_AUDIO, initial_a_stream_idx);
+    player->av_fmt->streams[initial_a_stream_idx]->discard = AVDISCARD_DEFAULT;
+
+    player->a_player = create_audio_player(initial_a_stream_idx);
     if (!player->a_player)
         goto end;
-
-    set_initial_stream(player, AVMEDIA_TYPE_AUDIO, initial_a_stream_idx);
 
     if (initialize_decoder(&player->a_player->dec,
         player->av_fmt->streams[player->a_player->stream_idx]->codecpar,
@@ -89,8 +71,17 @@ void mkp_destroy_player(MkPlayer **player)
 {
     if (!player || !*player)
         return;
+
+    (*player)->abort_request = 1;
+    thread_join((*player)->demux_tid);
+
+    if ((*player)->a_player) {
+        stop_audio_player((*player)->a_player);
+        destroy_audio_player(&(*player)->a_player);
+    }
+
     avformat_close_input(&(*player)->av_fmt);
-    avcodec_free_context(&(*player)->a_player->dec.av_dec);
+
     free(*player);
     *player = NULL;
 }

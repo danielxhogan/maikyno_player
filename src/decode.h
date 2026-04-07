@@ -1,6 +1,6 @@
 #pragma once
 
-#include "packet_queue.h"
+#include "frame_queue.h"
 
 #include <libavcodec/avcodec.h>
 
@@ -23,4 +23,4 @@ typedef struct Decoder {
 
 int initialize_decoder(Decoder *dec, AVCodecParameters *codecpar, Cond need_pkts);
 int decode_frame(Decoder *dec, AVFrame *av_frame, AVSubtitle *sub);
-void decoder_destroy(Decoder *dec);
+void destroy_decoder(Decoder *dec, FrameQueue *frame_q);

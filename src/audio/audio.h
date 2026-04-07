@@ -5,6 +5,7 @@
 #include "../clock.h"
 #include "../thread/thread.h"
 
+#include <libswresample/swresample.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/samplefmt.h>
 
@@ -25,11 +26,10 @@ struct AudioPlayerBackend;
 typedef struct AudioPlayer {
     Thread tid;
 
-    struct SwrContext *swr_ctx;
-
     int stream_idx;
     int last_stream_idx;
 
+    struct SwrContext *swr_ctx;
     AudioParams src_params;
     AudioParams tgt_params;
 
@@ -40,6 +40,7 @@ typedef struct AudioPlayer {
     double clock_ts;
     int clock_serial;
 
+    const struct AudioPlayerBackend *backend;
     int ao_buf_size;
     int64_t cb_time;
 
@@ -47,14 +48,18 @@ typedef struct AudioPlayer {
     int av_buf_idx;
     unsigned int av_buf_size;
     int av_buf_written_size;
-
-    const struct AudioPlayerBackend *backend;
 } AudioPlayer;
 
-AudioPlayer *create_audio_player();
+int prepare_frame_data(AudioPlayer *a_player);
+
+AudioPlayer *create_audio_player(int stream_idx);
 void *start_audio_player(void *ctx);
+void stop_audio_player(AudioPlayer *a_player);
+void destroy_audio_player(AudioPlayer **a_player);
 
 struct AudioPlayerBackend {
-    __typeof__(create_audio_player) *create;
-    __typeof__(start_audio_player) *start;
+    AudioPlayer *(*create) ();
+    int (*start) (AudioPlayer *a_player);
+    __typeof__(stop_audio_player) *stop;
+    __typeof__(destroy_audio_player) *destroy;
 };
