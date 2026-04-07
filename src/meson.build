@@ -14,6 +14,7 @@ lib_deps = [
     lavc,
     lswr,
     lavu,
+    libplacebo,
     pipewire,
     threads
 ]

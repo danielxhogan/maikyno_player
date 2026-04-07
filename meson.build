@@ -4,7 +4,9 @@ lavf = dependency('libavformat', required: true)
 lavc = dependency('libavcodec', required: true)
 lavu = dependency('libavutil', required: true)
 lswr = dependency('libswresample', required: true)
+libplacebo = dependency('libplacebo', required: true)
 pipewire = dependency('libpipewire-0.3', required: true)
+glfw = dependency('glfw3', required: true)
 
 cc = meson.get_compiler('c')
 
