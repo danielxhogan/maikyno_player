@@ -1,5 +1,6 @@
 #pragma once
 
+#include "video.h"
 #include "audio/audio.h"
 
 typedef struct MkPlayer {
@@ -14,5 +15,5 @@ typedef struct MkPlayer {
     int eof;
 
     AudioPlayer *a_player;
-    // VideoPlayer v_player;
+    VideoRenderer v_renderer;
 } MkPlayer;

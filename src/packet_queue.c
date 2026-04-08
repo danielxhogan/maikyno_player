@@ -86,6 +86,7 @@ int packet_queue_put_nullpacket(PacketQueue *pkt_q,
 int packet_queue_get(PacketQueue *pkt_q,
     AVPacket *av_pkt, int block, int *serial)
 {
+
     Packet pkt;
     int ret = 0;
 
@@ -118,6 +119,7 @@ int packet_queue_get(PacketQueue *pkt_q,
     mutex_unlock(&pkt_q->mutex);
     return ret;
 }
+
 void packet_queue_flush(PacketQueue *pkt_q)
 {
     Packet pkt;

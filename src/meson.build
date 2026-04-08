@@ -2,6 +2,7 @@ lib_sources = [
     'mkp.c',
     'demux.c',
     'decode.c',
+    'video.c',
     'audio/audio.c',
     'audio/pipewire.c',
     'packet_queue.c',

@@ -93,11 +93,15 @@ void *start_demuxer(void *ctx)
         //     continue;
         // }
 
-        if (player->a_player->dec.pkt_q.size > MAX_QUEUE_SIZE ||
-            stream_has_enough_packets(
+        if (player->a_player->dec.pkt_q.size + player->v_renderer.dec.pkt_q.size > MAX_QUEUE_SIZE ||
+            (stream_has_enough_packets(
                 player->av_fmt->streams[player->a_player->stream_idx],
                 player->a_player->stream_idx,
-                &player->a_player->dec.pkt_q)
+                &player->a_player->dec.pkt_q) &&
+            stream_has_enough_packets(
+                player->av_fmt->streams[player->v_renderer.stream_idx],
+                player->v_renderer.stream_idx,
+                &player->v_renderer.dec.pkt_q))
         ) {
             /* wait 10 ms */
             mutex_lock(&wait_mutex);
@@ -124,6 +128,8 @@ void *start_demuxer(void *ctx)
 
         if (pkt->stream_index == player->a_player->stream_idx) {
             packet_queue_put(&player->a_player->dec.pkt_q, pkt);
+        } else if (pkt->stream_index == player->v_renderer.stream_idx) {
+            packet_queue_put(&player->v_renderer.dec.pkt_q, pkt);
         } else {
             av_packet_unref(pkt);
         }
