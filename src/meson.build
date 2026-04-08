@@ -23,6 +23,7 @@ lib_deps = [
 libmkp = static_library('mkp',
     sources: lib_sources,
     dependencies: lib_deps,
-    gnu_symbol_visibility: 'hidden')
+    gnu_symbol_visibility: 'hidden',
+    install: true)
 
 subdir('app')

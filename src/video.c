@@ -1,7 +1,7 @@
 #include "video.h"
 #include "mkp.h"
 
-// #include <libplacebo/renderer.h>
+#include <libplacebo/renderer.h>
 #include <libplacebo/utils/libav.h>
 
 int create_video_renderer(VideoRenderer *v_renderer,
@@ -66,14 +66,14 @@ static void discard_frame(const struct pl_source_frame *src)
     printf("Dropped frame with pts %.3f.\n", src->pts);
 }
 
-uint64_t current_time()
+static uint64_t current_time()
 {
     struct timespec tp = { .tv_sec = 0, .tv_nsec = 0 };
     timespec_get(&tp, TIME_UTC);
     return tp.tv_sec * UINT64_C(1000000000) + tp.tv_nsec;
 }
 
-double time_diff(uint64_t a, uint64_t b)
+static double time_diff(uint64_t a, uint64_t b)
 {
     double frequency = 1e9;
     if (b > a)
@@ -82,14 +82,15 @@ double time_diff(uint64_t a, uint64_t b)
         return (a - b) / frequency;
 }
 
-int render_from_pl_frame(MkPlayer *player, struct pl_frame *frame)
+int mkp_render_from_pl_frame(MkPlayer *player, struct pl_frame *frame)
 {
     uint64_t ts_pre_update = current_time();
     if (!player->v_renderer.ts_start)
         player->v_renderer.ts_start = ts_pre_update;
 
     player->v_renderer.qparams.timeout = 0;
-    player->v_renderer.qparams.pts = time_diff(ts_pre_update, player->v_renderer.ts_start);
+    player->v_renderer.qparams.pts =
+        time_diff(ts_pre_update, player->v_renderer.ts_start);
 
 retry:
     switch (pl_queue_update(player->v_renderer.frame_q,

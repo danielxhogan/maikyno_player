@@ -69,7 +69,9 @@ MkPlayer *mkp_create_player_from_pl_vulkan(char *src,
     }
     player->av_fmt->streams[initial_a_stream_idx]->discard = AVDISCARD_DEFAULT;
 
-    if (create_video_renderer(&player->v_renderer, vk, initial_v_stream_idx) < 0) {
+    if (create_video_renderer(&player->v_renderer,
+        vk, initial_v_stream_idx) < 0)
+    {
         fprintf(stderr, "Failed to create video renderer.\n");
         goto end;
     }

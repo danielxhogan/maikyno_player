@@ -7,4 +7,8 @@ app_deps = [
     libplacebo
 ]
 
-executable('mkp', app_sources, dependencies: app_deps, link_with: libmkp)
+executable('mkp',
+    app_sources,
+    dependencies: app_deps,
+    link_with: libmkp,
+    install: true)

@@ -29,3 +29,16 @@ else
 endif
 
 subdir('src')
+
+api_headers = [
+    'src/includes/libmkp/mkplayer.h',
+    'src/includes/libmkp/mkplayer_pl.h'
+]
+install_headers(api_headers, subdir: 'libmkp')
+
+pkgconfig = import('pkgconfig')
+pkgconfig.generate(libmkp,
+    name: 'libmkp',
+    filebase: 'libmkp',
+    version: '0.1.0',
+    subdirs: 'libmkp')

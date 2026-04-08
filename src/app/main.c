@@ -101,7 +101,8 @@ int initialize_app(App *app)
     }
 
     VkResult err;
-    err = glfwCreateWindowSurface(app->vk_inst->instance, app->win, NULL, &app->surf);
+    err = glfwCreateWindowSurface(app->vk_inst->instance,
+        app->win, NULL, &app->surf);
     if (err != VK_SUCCESS) {
         fprintf(stderr, "GLFW: Failed creating vulkan surface\n");
         goto end;
@@ -114,9 +115,10 @@ int initialize_app(App *app)
         .allow_software = true
     ));
 
-    app->swapchain = pl_vulkan_create_swapchain(app->vk, pl_vulkan_swapchain_params(
-        .surface = app->surf,
-        .present_mode = VK_PRESENT_MODE_FIFO_KHR
+    app->swapchain = pl_vulkan_create_swapchain(app->vk,
+        pl_vulkan_swapchain_params(
+            .surface = app->surf,
+            .present_mode = VK_PRESENT_MODE_FIFO_KHR
     ));
     if (!app->swapchain) {
         fprintf(stderr, "libplacebo: Failed creating vulkan swapchain\n");
@@ -153,7 +155,7 @@ int initial_render(App *app)
     struct pl_frame frame;
     pl_frame_from_swapchain(&frame, &app->sc_frame);
 
-    if (render_from_pl_frame(app->player, &frame) < 0)
+    if (mkp_render_from_pl_frame(app->player, &frame) < 0)
         return -1;
 
     if (!pl_swapchain_submit_frame(app->swapchain))
@@ -177,7 +179,7 @@ int render_loop(App *app)
 
         pl_frame_from_swapchain(&frame, &app->sc_frame);
 
-        if (render_from_pl_frame(app->player, &frame) < 0) {
+        if (mkp_render_from_pl_frame(app->player, &frame) < 0) {
             return -1;
         }
 
@@ -196,11 +198,11 @@ int render_loop(App *app)
 int main(int argc, char **argv)
 {
     App *app = calloc(1, sizeof(App));
-    app->src = "/media/hugexjackedman/Media Libraries/hw/vc1/og/vc1_test2.mkv";
+    app->src = "/media/hugexjackedman/Media Libraries/mk_movies/Longlegs/Longlegs.mkv";
 
     initialize_app(app);
 
-    app->player = mkp_create_player_from_pl_vulkan(app->src, 0, 4, app->vk);
+    app->player = mkp_create_player_from_pl_vulkan(app->src, -1, 3, app->vk);
     if (!app->player)
         return -1;
 
