@@ -103,6 +103,11 @@ int mkp_render_from_pl_frame(MkPlayer *player, struct pl_frame *frame)
         player->v_renderer.ts_start = ts_pre_update;
 
     player->v_renderer.qparams.timeout = 0;
+
+    // double a_ts = get_ts(player->a_player);
+    // printf("a_ts: %f\n", a_ts);
+    // player->v_renderer.qparams.pts = a_ts;
+
     player->v_renderer.qparams.pts =
         time_diff(ts_pre_update, player->v_renderer.ts_start);
 
@@ -119,12 +124,6 @@ retry:
     case PL_QUEUE_MORE:
         player->v_renderer.qparams.timeout = UINT64_MAX;
         goto retry;
-    }
-
-    uint64_t ts_post_update = current_time();
-
-    if (player->v_renderer.qparams.timeout) {
-        player->v_renderer.ts_start += ts_post_update - ts_pre_update;
     }
 
     if (!pl_render_image_mix(player->v_renderer.renderer,
@@ -151,18 +150,18 @@ int mkp_render_from_fbo(MkPlayer *player, unsigned int fbo, int width, int heigh
     pl_tex tgt_tex =
         pl_opengl_wrap(player->v_renderer.gl->gpu, &wparams);
 
-    float height_matched = (float) tgt_tex->params.w / v_renderer->aspect_ratio;
     float width_matched = (float) tgt_tex->params.h * v_renderer->aspect_ratio;
+    float height_matched = (float) tgt_tex->params.w / v_renderer->aspect_ratio;
     float crop_w, crop_h, x_margin, y_margin;
 
     if (height_matched > (float) tgt_tex->params.h) {
-        crop_h = (float) tgt_tex->params.h;
         crop_w = width_matched;
+        crop_h = (float) tgt_tex->params.h;
         x_margin = ((float) tgt_tex->params.w - width_matched) / 2;
         y_margin = 0;
     } else {
-        crop_h = height_matched;
         crop_w = (float) tgt_tex->params.w;
+        crop_h = height_matched;
         x_margin = 0;
         y_margin = ((float) tgt_tex->params.h - height_matched) / 2;
     }

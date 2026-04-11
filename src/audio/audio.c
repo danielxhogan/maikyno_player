@@ -63,6 +63,7 @@ void *start_audio_player(void *ctx)
             frame->pts = (av_frame->pts == AV_NOPTS_VALUE)
                 ? NAN
                 : av_frame->pts * av_q2d(frame->av_frame->time_base);
+
             frame->pos = fd ? fd->pkt_pos : -1;
             frame->serial = a_player->dec.pkt_serial;
             frame->duration =
@@ -220,4 +221,9 @@ void destroy_audio_player(AudioPlayer **a_player)
     frame_queue_destroy(&(*a_player)->frame_q);
 
     (*a_player)->backend->destroy(a_player);
+}
+
+double get_ts(AudioPlayer *a_player)
+{
+    return a_player->backend->current_ts(a_player);
 }

@@ -199,7 +199,7 @@ int render_loop(App *app)
 int main(int argc, char **argv)
 {
     App *app = calloc(1, sizeof(App));
-    app->src = "/media/hugexjackedman/Media Libraries/mk_movies/Longlegs/Longlegs.mkv";
+    app->src = "/media/hugexjackedman/Media Libraries/mk_movies/collections/007/17 - GoldenEye/GoldenEye.mkv";
 
     initialize_app(app);
 

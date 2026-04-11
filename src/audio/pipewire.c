@@ -170,6 +170,24 @@ static int start_pipewire(AudioPlayer *a_player)
     return 0;
 }
 
+static double current_ts(AudioPlayer *a_player)
+{
+    PipewireContext *pw_ctx = (PipewireContext *) a_player;
+    if (!pw_ctx)
+        return -1;
+
+    struct pw_time pwt;
+    if (pw_stream_get_time_n(pw_ctx->stream, &pwt, sizeof(pwt)) < 0)
+        return -1;
+
+    uint64_t now = pw_stream_get_nsec(pw_ctx->stream);
+    int64_t diff = (int64_t) now - pwt.now;
+    int64_t elapsed_ticks =
+        (pwt.rate.denom * diff) / (pwt.rate.num * 1000000000LL);
+    int64_t current_pos_ticks = pwt.ticks + elapsed_ticks - pwt.delay;
+    return (double) current_pos_ticks * pwt.rate.num / pwt.rate.denom;
+}
+
 static void stop_pipewire(AudioPlayer *a_player)
 {
     PipewireContext *pw_ctx = (PipewireContext *) a_player;
@@ -194,6 +212,7 @@ static void destroy_pipewire_context(AudioPlayer **a_player)
 const struct AudioPlayerBackend pw_backend = {
     .create = initialize_pipewire,
     .start = start_pipewire,
+    .current_ts = current_ts,
     .stop = stop_pipewire,
     .destroy = destroy_pipewire_context
 };

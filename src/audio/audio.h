@@ -39,6 +39,8 @@ typedef struct AudioPlayer {
     Clock clock;
     double clock_ts;
     int clock_serial;
+    // uint64_t nb_samples;
+    // double next_pts;
 
     const struct AudioPlayerBackend *backend;
     int ao_buf_size;
@@ -54,12 +56,14 @@ int prepare_frame_data(AudioPlayer *a_player);
 
 AudioPlayer *create_audio_player(int stream_idx);
 void *start_audio_player(void *ctx);
+double get_ts(AudioPlayer *a_player);
 void stop_audio_player(AudioPlayer *a_player);
 void destroy_audio_player(AudioPlayer **a_player);
 
 struct AudioPlayerBackend {
     AudioPlayer *(*create) ();
     int (*start) (AudioPlayer *a_player);
+    __typeof__(get_ts) *current_ts;
     __typeof__(stop_audio_player) *stop;
     __typeof__(destroy_audio_player) *destroy;
 };
