@@ -50,7 +50,8 @@ static void close_cb(GLFWwindow *win)
     app->close_window = true;
 }
 
-static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL get_vk_proc_addr(VkInstance instance, const char* pName)
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+get_vk_proc_addr(VkInstance instance, const char* pName)
 {
     return (PFN_vkVoidFunction) glfwGetInstanceProcAddress(instance, pName);
 }
@@ -202,7 +203,8 @@ int main(int argc, char **argv)
 
     initialize_app(app);
 
-    app->player = mkp_create_player_from_pl_vulkan(app->src, -1, 3, app->vk);
+    app->player = mkp_create_player_from_pl_vulkan(app->src,
+        -1, 3, NULL, NULL, app->vk);
     if (!app->player)
         return -1;
 

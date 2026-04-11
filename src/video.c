@@ -3,13 +3,19 @@
 
 #include <libplacebo/renderer.h>
 #include <libplacebo/utils/libav.h>
+#include <libplacebo/gpu.h>
 
-int create_video_renderer(VideoRenderer *v_renderer,
-    pl_vulkan vk, int stream_idx)
+int create_video_renderer(VideoRenderer *v_renderer, int stream_idx,
+    void (*render_cb) (void *ctx), void *render_cb_ctx,
+    pl_vulkan vk)
 {
     v_renderer->stream_idx = stream_idx;
     v_renderer->last_stream_idx = stream_idx;
     v_renderer->ts_start = 0;
+    v_renderer->render_cb = render_cb;
+    v_renderer->render_cb_ctx = render_cb_ctx;
+    v_renderer->aspect_ratio = (float) v_renderer->stream->codecpar->width /
+       (float) v_renderer->stream->codecpar->height;
 
     v_renderer->opts = pl_options_alloc(v_renderer->log);
     pl_options_reset(v_renderer->opts, &pl_render_default_params);
@@ -19,9 +25,17 @@ int create_video_renderer(VideoRenderer *v_renderer,
         .log_level = PL_LOG_WARN
     ));
 
-    v_renderer->vk = vk;
-    v_renderer->frame_q = pl_queue_create(vk->gpu);
-    v_renderer->renderer = pl_renderer_create(v_renderer->log, vk->gpu);
+    if (vk) {
+        v_renderer->vk = vk;
+        v_renderer->frame_q = pl_queue_create(vk->gpu);
+        v_renderer->renderer = pl_renderer_create(v_renderer->log, vk->gpu);
+    } else {
+        v_renderer->gl = pl_opengl_create(v_renderer->log, pl_opengl_params(
+            .allow_software = true,
+        ));
+        v_renderer->frame_q = pl_queue_create(v_renderer->gl->gpu);
+        v_renderer->renderer = pl_renderer_create(v_renderer->log, v_renderer->gl->gpu);
+    }
 
     v_renderer->qparams = *pl_queue_params(
         .interpolation_threshold = 0.01,
@@ -115,11 +129,61 @@ retry:
 
     if (!pl_render_image_mix(player->v_renderer.renderer,
         &player->v_renderer.mix, frame, &player->v_renderer.opts->params)) {
-        printf("here\n");
         return -1;
-        }
+    }
+
+    if (player->v_renderer.render_cb)
+        player->v_renderer.render_cb(player->v_renderer.render_cb_ctx);
 
     return 0;
+}
+
+int mkp_render_from_fbo(MkPlayer *player, unsigned int fbo, int width, int height)
+{
+    VideoRenderer *v_renderer = &player->v_renderer;
+
+    struct pl_opengl_wrap_params wparams = {
+        .framebuffer = fbo,
+        .width = width,
+        .height = height,
+    };
+
+    pl_tex tgt_tex =
+        pl_opengl_wrap(player->v_renderer.gl->gpu, &wparams);
+
+    float height_matched = (float) tgt_tex->params.w / v_renderer->aspect_ratio;
+    float width_matched = (float) tgt_tex->params.h * v_renderer->aspect_ratio;
+    float crop_w, crop_h, x_margin, y_margin;
+
+    if (height_matched > (float) tgt_tex->params.h) {
+        crop_h = (float) tgt_tex->params.h;
+        crop_w = width_matched;
+        x_margin = ((float) tgt_tex->params.w - width_matched) / 2;
+        y_margin = 0;
+    } else {
+        crop_h = height_matched;
+        crop_w = (float) tgt_tex->params.w;
+        x_margin = 0;
+        y_margin = ((float) tgt_tex->params.h - height_matched) / 2;
+    }
+
+    struct pl_frame frame = {
+        .num_planes = 1,
+        .planes[0] = {
+            .texture = tgt_tex,
+            .components = 3,
+            .component_mapping = { 0, 1, 2 },
+            .flipped = true
+        },
+        .crop = {
+            .x0 = x_margin,
+            .x1 = crop_w + x_margin,
+            .y0 = y_margin,
+            .y1 = crop_h + y_margin
+        }
+    };
+
+    return mkp_render_from_pl_frame(player, &frame);
 }
 
 void *start_video_decoder(void *ctx)

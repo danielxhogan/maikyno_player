@@ -34,7 +34,7 @@ void *start_audio_player(void *ctx)
 
     if (a_player->backend->start(a_player) != 0) {
         a_player->dec.pkt_q.abort_request = 1;
-        return;
+        return NULL;
     }
 
     AVFrame *av_frame = av_frame_alloc();
@@ -53,15 +53,20 @@ void *start_audio_player(void *ctx)
             goto the_end;
 
         if (got_frame) {
-            FrameData *fd = av_frame->opaque_ref ? (FrameData *) av_frame->opaque_ref->data : NULL;
+            FrameData *fd = av_frame->opaque_ref
+                ? (FrameData *) av_frame->opaque_ref->data
+                : NULL;
 
             if (!(frame = frame_queue_peek_writable(&a_player->frame_q)))
                 goto the_end;
 
-            frame->pts = (av_frame->pts == AV_NOPTS_VALUE) ? NAN : av_frame->pts * av_q2d(frame->av_frame->time_base);
+            frame->pts = (av_frame->pts == AV_NOPTS_VALUE)
+                ? NAN
+                : av_frame->pts * av_q2d(frame->av_frame->time_base);
             frame->pos = fd ? fd->pkt_pos : -1;
             frame->serial = a_player->dec.pkt_serial;
-            frame->duration = av_q2d((AVRational) {av_frame->nb_samples, av_frame->sample_rate});
+            frame->duration =
+                av_q2d((AVRational) {av_frame->nb_samples, av_frame->sample_rate});
 
             av_frame_move_ref(frame->av_frame, av_frame);
             frame_queue_push(&a_player->frame_q);

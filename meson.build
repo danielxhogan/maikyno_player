@@ -32,7 +32,7 @@ subdir('src')
 
 api_headers = [
     'src/includes/libmkp/mkplayer.h',
-    'src/includes/libmkp/mkplayer_pl.h'
+    'src/includes/libmkp/mkplayer_pl.h',
 ]
 install_headers(api_headers, subdir: 'libmkp')
 

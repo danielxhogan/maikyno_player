@@ -3,6 +3,7 @@
 #include "demux.h"
 
 #include <libplacebo/vulkan.h>
+#include <libplacebo/opengl.h>
 #include <malloc.h>
 
 static int initialize_player(MkPlayer **player, char *src)
@@ -36,13 +37,17 @@ static int get_initial_stream_idx(MkPlayer *player,
 }
 
 MkPlayer *mkp_create_player(char *src,
-    int initial_v_stream_idx, int initial_a_stream_idx)
+    int initial_v_stream_idx, int initial_a_stream_idx,
+    void (* render_cb) (void *ctx), void *render_cb_ctx)
 {
-    return NULL;
+    return mkp_create_player_from_pl_vulkan(src,
+        initial_v_stream_idx,initial_a_stream_idx,
+        render_cb, render_cb_ctx, NULL);
 }
 
 MkPlayer *mkp_create_player_from_pl_vulkan(char *src,
-    int initial_v_stream_idx, int initial_a_stream_idx, pl_vulkan vk)
+    int initial_v_stream_idx, int initial_a_stream_idx,
+    void (* render_cb) (void *ctx), void *render_cb_ctx, pl_vulkan vk)
 {
     MkPlayer *player = NULL;
 
@@ -70,7 +75,7 @@ MkPlayer *mkp_create_player_from_pl_vulkan(char *src,
     player->av_fmt->streams[initial_a_stream_idx]->discard = AVDISCARD_DEFAULT;
 
     if (create_video_renderer(&player->v_renderer,
-        vk, initial_v_stream_idx) < 0)
+        initial_v_stream_idx, render_cb, render_cb_ctx, vk) < 0)
     {
         fprintf(stderr, "Failed to create video renderer.\n");
         goto end;
